@@ -1,0 +1,601 @@
+---
+description: "Validates skills against best practices. Use when user says 'check skill', 'skillcheck', or 'validate SKILL.md'."
+alwaysApply: false
+---
+
+# SkillCheck (Free)
+
+Check skills against Anthropic guidelines and the agentskills specification. This file contains Free tier validation rules.
+
+**Want deeper analysis?** [Upgrade to Pro](https://getskillcheck.com) for anti-slop detection, security scanning, token optimization, WCAG compliance, and enterprise checks.
+
+## When to Use
+
+Activate when user:
+- Says "check skill", "skillcheck", or "validate SKILL.md"
+- Wants to verify skills meet Anthropic best practices
+- Asks to find issues in skill definitions
+
+## Prerequisites
+
+- Any AI assistant with file Read capability (Claude Code, Cursor, Windsurf, Codex CLI)
+- Works on any platform (Unix/macOS/Windows)
+- No special tools required (Read-only)
+
+## How to Check a Skill
+
+1. **Locate**: Find target SKILL.md file(s)
+2. **Read**: Load the content
+3. **Validate**: Apply each rule section below
+4. **Report**: List issues found with severity and fixes
+
+---
+
+# Free Tier Validation Rules
+
+Apply these checks in order. Each subsection defines patterns to match and issues to flag.
+
+## 1. Frontmatter Structure
+
+Every SKILL.md must start with YAML frontmatter between `---` markers.
+
+### Required Fields
+
+| Field | Required | Rules |
+|-------|----------|-------|
+| `name` | Yes | Lowercase, hyphens only, 1-64 chars |
+| `description` | Yes | WHAT + WHEN pattern, 1-1024 chars |
+
+### Optional Fields (Spec)
+
+Fields defined in the [agentskills.io](https://agentskills.io) specification:
+
+| Field | Purpose |
+|-------|---------|
+| `license` | License name or reference to bundled license file |
+| `allowed-tools` | Tools the skill can use (space-separated or YAML list) |
+| `compatibility` | Platform compatibility info (max 500 chars) |
+| `metadata` | Additional key-value pairs |
+
+### Claude Code Extensions
+
+Recognized by Claude Code (per the [Claude Code skills docs](https://code.claude.com/docs/en/skills)) but not part of the agentskills.io spec. Other agents may ignore these fields, and claude.ai uploads and the Skills API reject them (see 1.19).
+
+| Field | Purpose |
+|-------|---------|
+| `when_to_use` | Extra trigger context, appended to `description` in the skill listing |
+| `argument-hint` | Autocomplete hint for expected arguments |
+| `arguments` | Named positional arguments for `$name` substitution (space-separated string or YAML list) |
+| `model` | Override model (full ID like claude-opus-4-6, alias: opus, sonnet, haiku, or `inherit`) |
+| `effort` | Effort level: low, medium, high, xhigh, or max |
+| `disallowed-tools` | Tools removed while the skill is active (space- or comma-separated string, or YAML list) |
+| `context` | Run context ("fork" for sub-agent) |
+| `agent` | Agent type when context: fork |
+| `background` | With `context: fork`, set false to wait for the forked result (default: true) |
+| `hooks` | Lifecycle hooks (PreToolUse, PostToolUse, Stop) |
+| `paths` | Glob patterns that limit when the skill auto-activates (comma-separated string or YAML list) |
+| `shell` | Shell for inline commands: bash (default) or powershell |
+| `user-invocable` | Show in slash menu (default: true) |
+| `disable-model-invocation` | Manual-only skill |
+
+### Community Extensions
+
+Not part of any spec, and not read by Claude Code (it ignores them silently). Used by community tools and registries. Do not flag them under 1.8 or 1.19.
+
+| Field | Purpose |
+|-------|---------|
+| `category` | Skill domain(s) for discovery and filtering |
+| `produces` | Artifact types this skill outputs (comma-separated) |
+| `consumes` | Artifact types this skill reads from other skills (comma-separated) |
+| `type` | Skill type indicator |
+| `author` | Skill author |
+| `date` | Creation/update date |
+
+### Field Recognition and Values
+
+**Check 1.8-unexpected-field** (Suggestion): A top-level key that appears in none of the three tables above (spec, Claude Code, community). Claude Code ignores unknown keys without reporting an error, so a typo silently does nothing; claude.ai uploads and the Skills API reject the file outright. Keys under `metadata` are free-form and never flagged.
+
+**Check 1.13-disallowed-camelcase** (Suggestion): `disallowedTools` is the subagent spelling. In SKILL.md the field is `disallowed-tools`; the camelCase key is ignored. Report this instead of 1.8.
+
+**Check 1.12-maxturns-not-skill-field** (Suggestion): `maxTurns` is a subagent field, not a skill field. Claude Code ignores it in SKILL.md. Report this instead of 1.8.
+
+**Check 1.19-non-portable-field** (Suggestion): One finding listing every key outside the spec that is present, from the Claude Code table and the community table alike. Claude Code loads or ignores them, but claude.ai uploads and the Skills API accept only `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools`.
+
+**Check 1.11-effort-invalid** (Warning): `effort` is not one of `low`, `medium`, `high`, `xhigh`, `max`.
+
+**Check 1.18-bool-value** (Warning): `user-invocable`, `disable-model-invocation` or `background` holds something other than `true`, `false`, `yes`, `no`, `on`, `off`, `1` or `0` (any letter case).
+
+**Check 1.14-listing-cap** (Warning): `description` plus `when_to_use` exceeds 1,536 characters. The skill listing truncates the combined text at that length, so trailing triggers are lost. Put the key use case first.
+
+**Check 1.15-shell-invalid** (Warning): `shell` is set to anything other than `bash` or `powershell`.
+
+**Check 1.16-background-no-fork** (Suggestion): `background` is set but `context: fork` is not. The field only applies to forked skills.
+
+**Check 1.17-paths-invalid** (Warning): `paths` is not a glob string (comma-separated allowed) or a YAML list of glob strings, for example a map, a number, a boolean, or an empty value.
+
+### Category Validation
+
+> **Note**: `category` is a community extension, not part of the agentskills.io spec. Do not flag a missing category field. Only validate format if present.
+
+**Format**: String or array of strings, lowercase letters, numbers, and hyphens only.
+
+**Pattern**: `^[a-z][a-z0-9-]*[a-z0-9]$` (same rules as skill name)
+
+**Common categories**: `development`, `productivity`, `data`, `automation`, `writing`, `design`, `security`, `devops`, `api`, `testing`, `documentation`, `legal`, `financial`, `marketing`, `ai-ml`
+
+<example type="valid">
+category: development
+</example>
+
+<example type="valid">
+category:
+  - development
+  - automation
+</example>
+
+<example type="invalid">
+category: Dev_Tools
+reason: uppercase and underscore not allowed
+</example>
+
+<example type="invalid">
+category: my--category
+reason: consecutive hyphens not allowed
+</example>
+
+### Name Validation
+
+**Pattern**: `^[a-z][a-z0-9-]*[a-z0-9]$`
+
+**Naming suggestions**: Avoid generic terms that don't describe what the skill does: `helper`, `utils`, `tools`, `misc`, `stuff`, `things`, `manager`, `handler`. Product-specific terms (`claude`, `anthropic`, `mcp`) are allowed but may limit portability across agents.
+
+<example type="valid">
+name: weekly-report-generator
+</example>
+
+<example type="invalid">
+name: helper-tool
+reason: vague term "helper"
+</example>
+
+<example type="invalid">
+name: Claude_Skill
+reason: uppercase and underscore not allowed
+</example>
+
+### Description Validation
+
+Must contain:
+1. **WHAT**: Action verb explaining what skill does
+2. **WHEN**: Trigger phrase describing when to invoke the skill (can appear anywhere in description)
+
+**Action verbs**: Create, Generate, Build, Convert, Extract, Analyze, Transform, Process, Validate, Format, Export, Import, Parse, Search, Find
+
+**WHEN triggers**: "Use when", "Use for", "Use this when", "Invoke when", "Activate when", "Triggers on", "Auto-activates", "Run when", "Applies to", "Helps with"
+
+<example type="valid">
+description: Generate weekly reports from Azure DevOps data. Use when user says "weekly update" or asks for stakeholder summaries.
+</example>
+
+<example type="valid">
+description: Helps with code review workflows for Pull Requests.
+</example>
+
+<example type="invalid">
+description: A tool for reports.
+reason: no WHAT verb, no WHEN trigger
+</example>
+
+### allowed-tools Validation
+
+Both space-separated and YAML list formats are valid:
+
+<example type="valid">
+allowed-tools: Read Glob Bash
+</example>
+
+<example type="valid">
+allowed-tools:
+  - Read
+  - Glob
+  - Bash
+</example>
+
+<example type="invalid">
+allowed-tools: Read, Glob, Bash
+reason: comma separation is deprecated; use spaces or YAML list
+</example>
+
+### Directory Structure Validation
+
+Skills can include optional subdirectories per the agentskills spec:
+
+| Directory | Purpose | Validation |
+|-----------|---------|------------|
+| `references/` | Additional docs (REFERENCE.md, etc.) | Files should be .md format |
+| `scripts/` | Executable code (Python, Bash, JS) | Should have execute permissions |
+| `assets/` | Static resources (templates, data) | No validation required |
+
+**Skill path formats supported**:
+- Standard: `~/.claude/skills/{skill-name}/SKILL.md`
+- Namespaced: `~/.claude/skills/{namespace}/{skill-name}/SKILL.md`
+
+**Namespace support**: Namespaces allow organizing skills by source (personal, team, project):
+- `~/.claude/skills/internal/weekly-reports/SKILL.md`
+- `~/.claude/skills/shared/code-review/SKILL.md`
+
+<example type="valid">
+my-skill/
+├── SKILL.md
+├── references/
+│   └── advanced-usage.md
+└── scripts/
+    └── helper.py
+</example>
+
+<example type="invalid">
+my-skill/
+├── skill.md          # Wrong: must be SKILL.md (case-sensitive)
+└── refs/             # Warning: use references/ not refs/
+</example>
+
+**Directory name must match skill name**: The parent directory name must exactly match the `name` field in frontmatter.
+
+<example type="invalid">
+weekly-report/SKILL.md with name: weekly-reports
+reason: directory "weekly-report" doesn't match name "weekly-reports"
+</example>
+
+---
+
+## 2. Naming Quality
+
+Names should be descriptive compounds, not single words.
+
+<example type="invalid">
+name: generator
+reason: too generic, what does it generate?
+</example>
+
+<example type="valid">
+name: pdf-report-generator
+</example>
+
+**Length Guidelines**: Minimum 3 chars, optimal 10-30 chars, maximum 64 chars.
+
+---
+
+## 3. Semantic Checks
+
+Validate logical consistency and clarity of skill instructions.
+
+### Contradiction Detection
+
+Flag conflicting instructions that simultaneously require and forbid the same action.
+
+### Ambiguous Terms
+
+Flag vague language that should be more specific. Terms like "multiple items" or "correct settings" lack precision. Use exact counts or specific criteria instead.
+
+**Exceptions** (not flagged):
+- Terms inside code blocks or blockquotes
+- Terms inside inline code spans (backticks); a backticked literal is a quoted example, not vague writing
+- Content in example/usage/pattern sections
+- Before/After and Good/Bad comparison lines
+- Terms followed by qualifiers (e.g., "some specific files")
+
+### Output Format Specification
+
+Skills that mention output should specify format with concrete examples.
+
+**Detection**:
+- Skill mentions "output/returns/produces" without `## Output` section
+- Has output section but lacks code blocks, JSON, or tables
+
+<example type="valid">
+## Output
+
+Returns JSON:
+
+```json
+{
+  "status": "success",
+  "items": ["a", "b", "c"]
+}
+```
+</example>
+
+<example type="invalid">
+## Output
+
+Returns the processed data.
+
+reason: No concrete format example
+</example>
+
+### Wisdom/Platitude Detection
+
+**Check 4.6-wisdom-platitude** (Suggestion): Detects generic advice ("wisdom") that lacks actionable content. Skills should contain concrete instructions, not motivational prose.
+
+**Three detection layers**:
+
+1. **Opener patterns**: Lines starting with "Remember that", "It's important to", "Keep in mind that", "Think about", "Never forget that", "Always keep in mind", "Consider the importance of"
+2. **Platitude structures**: Mid-line "[noun] is essential/crucial/important to [noun]" patterns
+3. **Vague imperatives**: "Ensure quality", "maintain standards", "strive for best practices"
+
+**Exceptions** (not flagged):
+- Content inside code blocks or blockquotes
+- Content in example/usage/pattern sections
+- Before/After and Good/Bad comparison lines
+
+### Anti-Pattern Format Lint
+
+**Check 2.8-antipattern-format** (Suggestion): Anti-pattern sections should use structured formats (tables or bullet lists) rather than wall-of-text prose.
+
+**Fires when**:
+- Anti-pattern section has a long prose line (100+ chars) with don't/avoid/never
+- Anti-pattern section has 3+ prose lines with 3+ avoidance directives
+
+**Does NOT fire when** section already uses tables or bullet lists.
+
+### Hollow Content
+
+**Check 22.7-hollow-content** (Suggestion): A gotchas/troubleshooting section with only generic filler and no concrete knowledge is hollow.
+
+**Fires when**: in a `## Gotchas` / `## Troubleshooting` / `## Tips` / `## Caveats` section, 3+ lines are generic filler ("follow team standards", "ensure proper handling", "handle appropriately", "use appropriate methods", "maintain quality") AND no line carries a concrete signal (specific threshold, consequence "X because Y", numbered debug step, or file/function reference).
+
+**Does NOT fire when** the section has at least one concrete threshold, consequence, or debugging step, or the content is in code blocks.
+
+### Restraint Without Safety Carve-Out
+
+**Check 28.2-restraint-without-carveout** (Warning): A restraint/minimalism directive with no validation/security/accessibility carve-out can reward skipping non-negotiables, not just avoiding gold-plating. "Lazy, not negligent."
+
+**Fires when**: a restraint directive is present (YAGNI, "keep it minimal", "don't over-build / over-engineer", "simplest thing that works", "resist the urge to add", "prefer the stdlib") AND no line pairs a keep/never-cut cue ("never cut", "always keep", "still required", "non-negotiable") with a safety noun (validation, security, accessibility / a11y).
+
+**Does NOT fire when**: no restraint directive is present; or an explicit carve-out clause exists. An incidental "security"/"validation" mention without a keep cue is NOT a carve-out.
+
+### Invisible Unicode (Cat 30)
+
+Search (do not just read — these characters render as nothing) SKILL.md and `references/*.md` with three patterns:
+
+- **30.1-ascii-smuggling** (Critical): `[\x{E0000}-\x{E007F}]` — Unicode tag characters carrying a hidden ASCII message. Decode it (codepoint minus 0xE0000) and quote it in the finding. Exempt a well-formed flag emoji: U+1F3F4 + 2–6 tag letters/digits + U+E007F.
+- **30.2-bidi-override** (Critical): `[\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]` — trojan-source direction controls (CVE-2021-42574). Exempt genuine right-to-left prose; never exempt code blocks, filenames, or commands.
+- **30.3-invisible-run / 30.4-invisible-char**: `[\x{034F}\x{180E}\x{200B}\x{200C}\x{2060}\x{FEFF}\x{2061}-\x{2064}\x{206A}-\x{206F}]` — zero-width characters. 10+ consecutive on a line: Critical; 3+ grouped: Warning; isolated: Suggestion. A U+FEFF at the very start of the file is a BOM — ignore it. ZWJ and variation selectors are deliberately not in the pattern (emoji structure).
+
+---
+
+## 4. Quality Patterns (Strengths)
+
+Recognize positive patterns in skills. These are reported as "strengths" rather than issues.
+
+### 8.1 Has Example Section
+
+Skills with `## Example`, `## Usage`, or `<example>` tags demonstrate expected behavior clearly.
+
+**Strength**: "Skill includes example section"
+
+### 8.2 Has Error Handling
+
+Skills documenting limitations, error cases, or edge cases set correct expectations.
+
+**Patterns detected**: `## Error`, `## Limitation`, `does not support`, `will fail if`
+
+**Strength**: "Skill documents error handling or limitations"
+
+### 8.3 Has Trigger Phrases
+
+Description includes activation triggers (Use when, Triggers on, Applies to, etc.)
+
+**Strength**: "Description includes activation triggers"
+
+### 8.4 Has Output Format
+
+Skills specifying output format with concrete examples (code blocks, JSON, tables).
+
+**Strength**: "Skill specifies output format with examples"
+
+### 8.5 Has Structured Instructions
+
+Skills using numbered steps or clear workflow sections.
+
+**Strength**: "Skill uses structured instructions"
+
+### 8.6 Has Prerequisites
+
+Skills documenting setup requirements or dependencies.
+
+**Strength**: "Skill documents prerequisites"
+
+---
+
+# Pro Tier Features
+
+The following checks are available with [SkillCheck Pro](https://getskillcheck.com):
+
+## Anti-Slop Detection (Pro)
+
+Detects AI writing patterns that waste tokens and reduce clarity:
+- Em-dash abuse
+- Hedge stacking ("might potentially")
+- Sycophantic openers ("Great question!")
+- Filler phrases ("It's important to note that")
+- Cliche intros ("In today's fast-paced world")
+- Essay closers ("In conclusion")
+
+**Why it matters**: Skills that use slop patterns teach Claude bad habits. Pro catches 7 anti-patterns.
+
+## Token Budget Analysis (Pro)
+
+Ensures skills stay within optimal size limits:
+- Frontmatter: 400 tokens max
+- Body: 5,000 tokens optimal, 8,000 max
+- Total: 15,000 tokens max
+
+**Why it matters**: Oversized skills consume context window and slow Claude down.
+
+## Security Scanning (Pro)
+
+Detects security issues in technical skills:
+- Hardcoded secrets and API keys
+- Command injection vulnerabilities
+- PII in examples (emails, phone numbers, SSNs)
+- Unsafe path patterns
+
+**Why it matters**: Public skills with leaked credentials are a liability.
+
+## Workflow Clarity (Pro)
+
+Validates instruction structure:
+- Complex skills (2000+ tokens) should use numbered steps
+- Clear task decomposition
+
+**Why it matters**: Well-structured instructions perform better.
+
+## Enterprise Readiness (Pro)
+
+Checks for team/org deployment:
+- No hardcoded user paths
+- Environment variable configuration
+- Permission documentation
+- Audit trail support
+
+**Why it matters**: Enterprise skills need to work across different environments.
+
+## WCAG Compliance (Pro)
+
+For visual-output skills:
+- Color contrast ratios (4.5:1 for AA)
+- Non-color indicators
+- AI slop aesthetic detection
+
+**Why it matters**: Accessible output works for everyone.
+
+---
+
+## Error Handling
+
+Troubleshooting guide for validation failures.
+
+### Common Errors and Fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| "No YAML frontmatter" | Missing `---` markers | Add frontmatter block at file start |
+| "Missing required field: name" | No name in frontmatter | Add `name: your-skill-name` |
+| "Invalid name format" | Uppercase, underscore, or special chars | Use lowercase letters, numbers, hyphens only |
+| "Description missing WHEN trigger" | No activation phrase | Add "Use when..." clause |
+| "Unknown tool in allowed-tools" | Typo or invalid tool name | Check tool spelling, use space separation |
+
+### Timeout Behavior
+
+- Validation completes in under 2 seconds for files under 1000 lines
+- Large skills (1000+ lines) may hit context limits
+- If validation stalls, break skill into smaller modules
+
+### Recovery Steps
+
+1. Run validation on individual sections if full validation fails
+2. Check frontmatter syntax first (most common failure point)
+3. Use `--verbose` flag with MCP server for detailed diagnostics
+
+---
+
+## Severity Levels
+
+| Level | Meaning | Action |
+|-------|---------|--------|
+| Critical | Skill may not function | Must fix |
+| Warning | Best practice violation | Should fix |
+| Suggestion | Could be improved | Nice to have |
+
+---
+
+## Reporting Format
+
+```markdown
+## SkillCheck Results: [skill-name]
+
+### Summary
+- Critical: X | Warnings: Y | Suggestions: Z | Passed: N
+
+### Critical Issues
+**[Check ID]** Line N: [Issue description]
+**Fix**: [How to resolve]
+```
+
+### Badge Output
+
+When a skill passes with 0 critical issues, include this badge snippet:
+
+```markdown
+### Badge
+
+Add this to your README:
+
+[![skillcheck passed](https://raw.githubusercontent.com/olgasafonova/skillcheck-free/main/skill-check/passed.svg)](https://getskillcheck.com)
+```
+
+This links to getskillcheck.com when clicked.
+
+---
+
+## Check IDs Reference
+
+| ID | Category | Tier | Description |
+|----|----------|------|-------------|
+| 1.0-dir-* | Structure | Free | Directory structure issues |
+| 1.1-name-* | Structure | Free | Name field issues |
+| 1.2-desc-* | Structure | Free | Description issues |
+| 1.3-tools-* | Structure | Free | allowed-tools issues |
+| 1.4-category-* | Structure | Free | Category field issues |
+| 1.8-unexpected-field | Structure | Free | Key unknown to the spec, Claude Code and community conventions |
+| 1.11-effort-invalid | Structure | Free | effort not low/medium/high/xhigh/max |
+| 1.12-maxturns-not-skill-field | Structure | Free | maxTurns is a subagent field, ignored in SKILL.md |
+| 1.13-disallowed-camelcase | Structure | Free | disallowedTools instead of disallowed-tools |
+| 1.14-listing-cap | Structure | Free | description + when_to_use over 1,536 characters |
+| 1.15-shell-invalid | Structure | Free | shell not bash or powershell |
+| 1.16-background-no-fork | Structure | Free | background set without context: fork |
+| 1.17-paths-invalid | Structure | Free | paths not a glob string or list |
+| 1.18-bool-value | Structure | Free | Boolean field holds a non-boolean value |
+| 1.19-non-portable-field | Structure | Free | Non-spec keys (Claude Code and community) rejected by claude.ai uploads and the Skills API |
+| 2.*-body-* | Body | Free | File length, format issues |
+| 2.8-antipattern-format | Body | Free | Anti-pattern section format lint |
+| 3.*-name-* | Naming | Free | Name quality issues |
+| 4.*-* | Semantic | Free | Logic/contradiction/output format issues |
+| 4.6-wisdom-platitude | Semantic | Free | Wisdom/platitude detection |
+| 5.*-slop-* | Anti-Slop | **Pro** | Writing pattern issues |
+| 5.4-pii-* | Security | **Pro** | PII detection issues |
+| 6.*-wcag-* | WCAG | **Pro** | Accessibility issues |
+| 7.*-security-* | Security | **Pro** | Path/credential/injection issues |
+| 9.*-token-* | Tokens | **Pro** | Budget issues |
+| 10.*-enterprise-* | Enterprise | **Pro** | Org deployment issues |
+| 12.*-workflow-* | Workflow | **Pro** | Step-by-step instruction issues |
+| 22.7-hollow-content | Knowledge Density | Free | Hollow gotchas/troubleshooting sections |
+| 28.2-restraint-without-carveout | Restraint | Free | Restraint without a validation/security/a11y carve-out |
+| 30.1-ascii-smuggling | Invisible Unicode | Free | Hidden ASCII payload in Unicode tag characters (decoded in the finding) |
+| 30.2-bidi-override | Invisible Unicode | Free | Trojan-source BiDi controls (CVE-2021-42574) |
+| 30.3-invisible-run | Invisible Unicode | Free | 10+ consecutive invisible characters |
+| 30.4-invisible-char | Invisible Unicode | Free | Isolated or grouped zero-width characters |
+
+---
+
+## Upgrade to Pro
+
+Get the complete validation suite at [getskillcheck.com](https://getskillcheck.com):
+
+- **Go binary** for CI/CD integration
+- **MCP server** for IDE integration (protocol 2024-11-05)
+- **All Pro checks** (anti-slop, security, tokens, WCAG, enterprise)
+- **Auto-fix** suggestions
+- **Badge generation** for marketplace-ready skills
+
+```json
+{
+  "mcpServers": {
+    "skillcheck": {
+      "command": "skillcheck-mcp",
+      "env": { "SKILLCHECK_LICENSE": "your-license-key" }
+    }
+  }
+}
+```

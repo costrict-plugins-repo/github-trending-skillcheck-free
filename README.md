@@ -1,0 +1,307 @@
+# SkillCheck Free
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-Skill-green?logo=anthropic&logoColor=white)](https://docs.anthropic.com/en/docs/claude-code)
+[![Claude Projects](https://img.shields.io/badge/Claude-Projects-orange?logo=anthropic&logoColor=white)](https://support.claude.com/en/articles/12512180-using-skills-in-claude)
+[![Cursor](https://img.shields.io/badge/Cursor-Rules-purple)](https://cursor.com/docs/context/rules)
+
+[![skillcheck passed](https://raw.githubusercontent.com/olgasafonova/skillcheck-free/main/skills/skill-check/passed.svg)](https://getskillcheck.com)
+
+Validate AI coding assistant skills against the [agentskills specification](https://agentskills.io). Works with Claude Code, Claude Desktop/Web, and Cursor. Catch issues before your users do.
+
+## Why SkillCheck?
+
+Agent Skills are now an open standard adopted by Claude Code, Cursor, and dozens of coding agents. Your skill needs to work everywhere and follow best practices.
+
+SkillCheck validates:
+- Does the YAML frontmatter follow the spec?
+- Will it trigger when users actually need it?
+- Are the instructions clear and unambiguous?
+
+## Installation
+
+### Claude Code
+
+The simplest path — use the [skills CLI](https://github.com/vercel-labs/skills):
+
+```bash
+npx skills add olgasafonova/SkillCheck-Free
+```
+
+Or copy the folder manually:
+
+```bash
+cp -r skills/skill-check ~/.claude/skills/
+```
+
+Or clone directly:
+
+```bash
+git clone https://github.com/olgasafonova/SkillCheck-Free.git
+cp -r SkillCheck-Free/skills/skill-check ~/.claude/skills/
+```
+
+### Claude Desktop/Web (Projects)
+
+1. Open [claude.ai](https://claude.ai) or Claude Desktop app
+2. Create a new Project (or open an existing one)
+3. Go to Project settings → Custom instructions
+4. Copy the contents of [`skills/skill-check/SKILL.md`](skills/skill-check/SKILL.md) (everything after the `---` frontmatter)
+5. Paste into the custom instructions field
+
+No file installation needed - the skill runs directly from your Project instructions.
+
+### Cursor
+
+Copy the rule file to your project's `.cursor/rules` directory:
+
+```bash
+mkdir -p .cursor/rules
+cp cursor-rules/skill-check.mdc .cursor/rules/
+```
+
+Or clone directly:
+
+```bash
+git clone https://github.com/olgasafonova/SkillCheck-Free.git
+mkdir -p .cursor/rules
+cp SkillCheck-Free/cursor-rules/skill-check.mdc .cursor/rules/
+```
+
+## Where to find SkillCheck-Free
+
+SkillCheck-Free is listed in:
+
+- **[skills.sh registry](https://skills.sh/olgasafonova/SkillCheck-Free)** — install via `npx skills add olgasafonova/SkillCheck-Free`
+- **[antigravity-awesome-skills](https://github.com/sickn33/antigravity-awesome-skills)** — included in sickn33's 1,239+ universal agentic skills collection
+
+## Usage
+
+In Claude Code, Claude Desktop/Web, or Cursor, say any of:
+- "skillcheck my skill"
+- "check skill at path/to/SKILL.md"
+- "validate my skills"
+
+## Example Output
+
+```
+## SkillCheck Results: my-awesome-skill
+
+### Summary
+- Critical: 1 | Warnings: 2 | Suggestions: 3 | Passed: 44
+
+### Critical Issues
+**[1.2-desc-what]** Line 3: Description missing action verb
+**Fix**: Start description with Create, Generate, Build, Convert, etc.
+
+### Warnings
+**[4.2-ambiguous-term]** Line 47: Vague term "several" found
+**Fix**: Specify exact count or range
+
+### Strengths
+- Skill includes example section
+- Skill documents prerequisites
+- Description includes activation triggers
+```
+
+## What It Checks
+
+### Structure (1.x)
+| Check | What It Catches |
+|-------|-----------------|
+| 1.1-name | Invalid name format, reserved words |
+| 1.2-desc | Missing or weak description (WHAT verb + WHEN trigger recommended) |
+| 1.3-tools | Unknown or deprecated tool formats |
+| 1.4-category | Invalid category format |
+| 1.8-unexpected-field | Frontmatter key unknown to the spec, Claude Code and community conventions (Claude Code ignores it; claude.ai uploads reject it) |
+| 1.11-effort-invalid | `effort` not one of low, medium, high, xhigh, max |
+| 1.12-maxturns-not-skill-field | `maxTurns` is a subagent field, ignored in SKILL.md |
+| 1.13-disallowed-camelcase | `disallowedTools` used instead of `disallowed-tools` |
+| 1.14-listing-cap | `description` + `when_to_use` over 1,536 characters (skill listing truncates) |
+| 1.15-shell-invalid | `shell` not bash or powershell |
+| 1.16-background-no-fork | `background` set without `context: fork` |
+| 1.17-paths-invalid | `paths` not a glob string or list |
+| 1.18-bool-value | Boolean field not true/false/yes/no/on/off/1/0 |
+| 1.19-non-portable-field | Non-spec keys (Claude Code and community) that claude.ai uploads and the Skills API reject |
+| 1.9-xml | XML angle brackets in frontmatter (prompt injection risk) |
+| 1.9-arg-hints | Missing argument-hint in frontmatter when $ARGUMENTS is used |
+| 1.10-readme | README.md inside skill folder (docs belong in SKILL.md) |
+
+### Body (2.x)
+| Check | What It Catches |
+|-------|-----------------|
+| 2.1-lines | File too long (500+ lines warning) |
+| 2.3-date | Hardcoded dates that will go stale |
+| 2.4-empty | Empty sections with no content |
+| 2.8-antipattern-format | Anti-pattern sections using prose instead of tables/bullets |
+| 2.9-mcp-tool-unqualified | Unqualified MCP tool names missing server prefix |
+
+### Naming (3.x)
+| Check | What It Catches |
+|-------|-----------------|
+| 3.1-vague | Generic names like "helper", "utils" |
+| 3.2-length | Names too short or too long |
+| 3.3-single | Single-word names lacking specificity |
+| 3.4-gerund | Gerund naming ("writing-helper" instead of verb-noun) |
+
+### Semantic (4.x)
+| Check | What It Catches |
+|-------|-----------------|
+| 4.1-contradiction | Conflicting instructions |
+| 4.2-ambiguous | Vague terms like "several", "appropriate" |
+| 4.3-output | Output mentioned but no format specified |
+| 4.6-wisdom | Generic advice/platitudes instead of actionable instructions |
+| 4.7-desc-workflow-steps | Description summarizes workflow steps (causes agents to skip body) |
+
+### Design Pattern Classification (19.x)
+SkillCheck classifies each skill into one of five design patterns from the Google ADK taxonomy:
+
+| Pattern | What It Means | Example Skills |
+|---------|--------------|----------------|
+| Reviewer | Evaluates output against criteria | skill-check, code-review |
+| Generator | Produces structured artifacts from templates | linkedin-post, brand-assets |
+| Inversion | Asks user questions before acting | grill-me, feature-scoping |
+| Pipeline | Chains multiple steps with checkpoints | sift, tapestry |
+| Tool Wrapper | Wraps an API with context-aware instructions | lmwtfy |
+
+Pro adds deep checks: validates pattern-specific requirements (criteria for Reviewers, output specs for Generators, etc.).
+
+### Quality Patterns (8.x) - Strengths
+SkillCheck also recognizes good practices:
+
+| Check | What It Recognizes |
+|-------|-------------------|
+| 8.1 | Has example section |
+| 8.2 | Documents error handling or limitations |
+| 8.3 | Description includes activation triggers |
+| 8.4 | Specifies output format with examples |
+| 8.5 | Uses structured instructions (numbered steps) |
+| 8.6 | Documents prerequisites |
+| 8.7 | Includes negative triggers to prevent over-triggering |
+| 8.8 | Uses `${CLAUDE_SKILL_DIR}` for portable path references |
+
+### Knowledge Density (22.x)
+| Check | What It Catches |
+|-------|-----------------|
+| 22.7 | Gotchas/troubleshooting sections with only generic filler and no concrete knowledge |
+
+Pro adds: threshold detection (22.1), consequence patterns (22.2), experience markers (22.3), debugging sequences (22.4), decision density (22.5), and concrete code references (22.6).
+
+### Plugin Manifest (24.x)
+
+When the input is a Claude Code plugin manifest (`.claude-plugin/plugin.json`), SkillCheck Free validates it against Anthropic's reference schema:
+
+| Check | What It Catches |
+|-------|-----------------|
+| 24.1 | `name` not in kebab-case |
+| 24.2 | `version` not canonical semver (no `v` prefix, must be MAJOR.MINOR.PATCH) |
+| 24.3 | `description` missing or empty |
+| 24.4 | `author.name` missing or empty |
+| 24.5 | Command file collides with bundled Claude Code commands (`simplify`, `batch`, `debug`, `loop`, `claude-api`, `security-review`) |
+| 24.6 | `.claude-plugin/` contains files other than `plugin.json` (commands/skills/hooks belong at plugin root) |
+
+Schema-floor rule: any rule that rejects Anthropic's own reference plugins is mis-calibrated. Validation stays compatible with the four-field minimum.
+
+Pro adds Cat 24 marketplace governance: cross-plugin dedup detection, naming convention enforcement against an org taxonomy, change-gate eval integration, maintainers and deprecation provenance recommendations, and cross-skill dependency graphs.
+
+### MCP Tool List (23.x, Free hook)
+
+When the input is an MCP server's `tools/list` response (standard MCP shape), SkillCheck Free surfaces two Agent Integration Readiness signals:
+
+| Check | What It Catches |
+|-------|-----------------|
+| 23.1-tool-count-high | Server exposes >20 tools (consider intent grouping or code-orchestration) |
+| 23.1-tool-count-strong | Server exposes >40 tools (strong code-orchestration candidate, Cloudflare 2-tool reference) |
+| 23.1-api-mirror | 3+ CRUD verb prefixes against the same noun (1:1 OpenAPI mirror smell) |
+
+Pro adds full Cat 23: CIMD-OAuth detection, MCP Apps usage, code-orchestration adoption, server-delivered skills pairing, remote vs local availability, destructive flag annotations, and user-vs-agent distinction enforcement.
+
+### OWASP Agentic Top 10 (26.x)
+
+Maps the OWASP Top 10 for Agentic Applications (2026) onto author-time text signals. The category only scores a skill with an agent surface (declares tools beyond Read/Glob/Grep, ingests external content, orchestrates subagents, or performs consequential actions); a plain text-formatting skill reports not-applicable. SkillCheck Free runs the 8 items with a deterministic signal:
+
+| Check | What It Catches |
+|-------|-----------------|
+| ASI-02 Tool Misuse | `allowed-tools: *`/`all` (critical), unconstrained `Bash`, or 5+ tools with no rationale |
+| ASI-03 Identity Abuse | caller-identity-override params (`as_user`, `impersonate`, `run_as`, etc.) |
+| ASI-04 Supply Chain | unpinned dependency installs (`pip install x`, `npm install x`, `npx x@latest`) |
+| ASI-05 Code Execution | `eval`/`exec`/`pickle.loads`/`subprocess shell=True` or `curl ... \| sh` |
+| ASI-08 Cascading Failure | uncapped loops or fan-out ("retry until", "loop until") |
+| ASI-09 Trust Exploitation | destructive op (`rm -rf`, `git push --force`, send/merge) with no confirmation gate nearby |
+| ASI-10 Rogue Agents | safeguard-disabling flags (`--no-verify`, `--force`) or long-running tasks with no kill switch |
+| ASI-11 Untraceability | consequential actions with zero logging/audit language |
+
+Pro adds the 7 grader items (ASI-01 goal hijack, ASI-06 memory poisoning, ASI-07 subagent trust, and the intent-reading halves of ASI-02/03/09/10): SkillCheck builds an evidence-loaded rubric pack and your own AI agent judges it, with no API key needed.
+
+### Invisible Unicode (30.x)
+| Check | What It Catches |
+|-------|-----------------|
+| 30.1-ascii-smuggling | Instructions hidden in Unicode tag characters; the hidden payload is decoded and shown in the finding |
+| 30.2-bidi-override | Trojan-source BiDi controls (CVE-2021-42574) that make displayed text differ from actual text |
+| 30.3-invisible-run | Runs of 10+ consecutive invisible characters (hidden-data encoding channel) |
+| 30.4-invisible-char | Isolated or grouped zero-width characters |
+
+Legitimate emoji never fire: flag emoji tag sequences, zero-width joiners in family emoji, and variation selectors are all exempt, and a byte-order mark at file start is ignored.
+
+## Severity Levels
+
+| Level | Meaning | Action |
+|-------|---------|--------|
+| Critical | Skill may not function | Must fix |
+| Warning | Best practice violation | Should fix |
+| Suggestion | Could be improved | Nice to have |
+| Strength | Good practice detected | Keep it up |
+
+## Free vs Pro
+
+| Feature | Free | Pro |
+|---------|------|-----|
+| Structure validation | Yes | Yes |
+| Body & naming checks | Yes | Yes |
+| Semantic consistency | Yes | Yes |
+| Quality patterns | Yes | Yes |
+| **Design Pattern Classification** | Detection | Deep checks |
+| **Knowledge Density** | Hollow content | Full density analysis |
+| **OWASP Agentic Top 10** | 8 deterministic checks | Grader pack your AI evaluates |
+| Artifact Contract Validation | - | Yes |
+| Trigger Collision Detection | - | Yes |
+| **Eval Kit (test prompt generation)** | - | Yes |
+| Anti-slop detection | - | Yes |
+| Security scanning | - | Yes |
+| Token budget analysis | - | Yes |
+| WCAG accessibility | - | Yes |
+| Enterprise readiness | - | Yes |
+| Production readiness | - | Yes |
+| Agent Readiness (L0-L3) | - | Yes |
+| MCP server integration | - | Yes |
+| CI/CD binary | - | Yes |
+
+**Get Pro**: [getskillcheck.com](https://getskillcheck.com)
+
+## Prerequisites
+
+- Claude Code (or any AI assistant with file Read capability)
+- Works on macOS, Linux, Windows
+- No dependencies required
+
+## How It Works
+
+SkillCheck Free is itself a skill/rule file. When you say "skillcheck", your AI assistant reads the validation rules and applies them to your target skill. No external API calls, no binaries - just your assistant following instructions.
+
+## Contributing
+
+Found a bug or have a suggestion? Open an issue at [github.com/olgasafonova/SkillCheck-Free/issues](https://github.com/olgasafonova/SkillCheck-Free/issues)
+
+## Links
+
+- Website: [getskillcheck.com](https://getskillcheck.com)
+- Specification: [agentskills.io](https://agentskills.io)
+- Pro version: [SkillCheck Pro](https://getskillcheck.com)
+
+## License
+
+MIT - see [LICENSE](LICENSE)
+
+---
+
+Built by [Olga Safonova](https://github.com/olgasafonova)
